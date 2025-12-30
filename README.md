@@ -11,33 +11,32 @@ Example using itzg's minecraft server image:
 ```yaml
 services:
   mc:
-  image: itzg/minecraft-server
-  tty: true
-  stdin_open: true
-  ports:
-    - "25565:25565"
-  environment:
-    EULA: "TRUE"
-    TYPE: "PAPER"
-    VERSION: "1.21.11"
-
-    MAX_PLAYERS: "10"
-    MOTD: "Test Server"
-    DIFFICULTY: "normal"
-    MODE: "survival"
-    PVP: "false"
-    SPAWN_PROTECTION: "1"
-
-    MEMORY: "3G"
-    USE_AIKAR_FLAGS: "TRUE"
-
-    ENABLE_RCON: "TRUE"
-    RCON_PASSWORD: "YOUR_RCON_PASSWORD"
-
-  volumes:
-    - ./data:/data
-  restart: unless-stopped
-
+    image: itzg/minecraft-server
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      VERSION: "1.21.11"
+  
+      MAX_PLAYERS: "10"
+      MOTD: "Test Server"
+      DIFFICULTY: "normal"
+      MODE: "survival"
+      PVP: "false"
+      SPAWN_PROTECTION: "1"
+  
+      MEMORY: "3G"
+      USE_AIKAR_FLAGS: "TRUE"
+  
+      ENABLE_RCON: "TRUE"
+      RCON_PASSWORD: "YOUR_RCON_PASSWORD"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+  
   backup:
     image: itzg/mc-backup
     depends_on:
@@ -63,7 +62,7 @@ services:
     volumes:
       - ./data:/data
       - ./backups:/backups:ro
-
+  
   bot:
     image: zitronenjoghurt/mcdc-bot:latest
     environment:
