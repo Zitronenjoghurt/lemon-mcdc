@@ -1,6 +1,6 @@
 [package]
 name = "lemon-mcdc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,6 @@ anyhow = "1.0.100"
 rcon = { version = "0.6.0", features = ["rt-tokio"] }
 regex = "1.12.2"
 serenity = "0.12.5"
-tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing = "0.1.43"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }

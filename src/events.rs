@@ -1,16 +1,22 @@
 use crate::config::Config;
 use crate::log_watcher::watch_logs;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tracing::{error, info};
 
+// Minecraft drops RCON commands longer than this
+const MAX_RCON_COMMAND_BYTES: usize = 1413;
+
 pub struct EventHandler {
     pub config: Arc<Config>,
+    log_watcher_started: AtomicBool,
 }
 
 impl EventHandler {
     pub fn new(config: &Arc<Config>) -> Self {
         Self {
             config: config.clone(),
+            log_watcher_started: AtomicBool::new(false),
         }
     }
 }
@@ -42,15 +48,26 @@ impl serenity::all::EventHandler for EventHandler {
             None => "white".to_string(),
         };
 
+        let mut content = msg.content.split_whitespace().collect::<Vec<_>>().join(" ");
+        if !msg.attachments.is_empty() {
+            if !content.is_empty() {
+                content.push(' ');
+            }
+            content.push_str("[attachment]");
+        }
+        if content.is_empty() {
+            return;
+        }
+
+        let Some(cmd) = tellraw_command(display_name, &name_color, &content) else {
+            error!("Discord message too long to relay, even truncated");
+            return;
+        };
+
         let conn =
             rcon::Connection::connect(self.config.rcon_url(), &self.config.rcon_password).await;
         match conn {
             Ok(mut conn) => {
-                let cmd = format!(
-                    r#"tellraw @a [{{"text":"[{}]","color":"{name_color}"}},{{"text":" {}","color":"white"}}]"#,
-                    display_name.replace('\\', "\\\\").replace('"', "\\\""),
-                    msg.content.replace('\\', "\\\\").replace('"', "\\\"")
-                );
                 if let Err(err) = conn.cmd(&cmd).await {
                     error!("Failed to send RCON command: {err}");
                 }
@@ -64,6 +81,10 @@ impl serenity::all::EventHandler for EventHandler {
     async fn ready(&self, ctx: serenity::all::Context, _ready: serenity::all::Ready) {
         info!("Bot online!");
 
+        if self.log_watcher_started.swap(true, Ordering::SeqCst) {
+            return;
+        }
+
         let http = ctx.http.clone();
         let config = self.config.clone();
 
@@ -71,4 +92,35 @@ impl serenity::all::EventHandler for EventHandler {
             watch_logs(http, config).await;
         });
     }
+}
+
+fn tellraw_command(display_name: &str, name_color: &str, content: &str) -> Option<String> {
+    let build = |text: &str| {
+        format!(
+            r#"tellraw @a [{{"text":"[{}]","color":"{name_color}"}},{{"text":" {}","color":"white"}}]"#,
+            escape(display_name),
+            escape(text)
+        )
+    };
+
+    let cmd = build(content);
+    if cmd.len() <= MAX_RCON_COMMAND_BYTES {
+        return Some(cmd);
+    }
+
+    let chars: Vec<char> = content.chars().collect();
+    let mut keep = chars.len();
+    while keep > 0 {
+        keep = keep.saturating_sub(50);
+        let truncated: String = chars[..keep].iter().collect::<String>() + "…";
+        let cmd = build(&truncated);
+        if cmd.len() <= MAX_RCON_COMMAND_BYTES {
+            return Some(cmd);
+        }
+    }
+    None
+}
+
+fn escape(text: &str) -> String {
+    text.replace('\\', "\\\\").replace('"', "\\\"")
 }

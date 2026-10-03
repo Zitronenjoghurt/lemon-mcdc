@@ -2,7 +2,8 @@ use crate::config::Config;
 use crate::events::EventHandler;
 use serenity::all::GatewayIntents;
 use serenity::Client;
-use tracing::info;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
 mod config;
@@ -25,7 +26,25 @@ async fn main() {
         .await
         .unwrap();
 
-    client.start().await.unwrap();
+    let shard_manager = client.shard_manager.clone();
+    tokio::spawn(async move {
+        wait_for_shutdown_signal().await;
+        info!("Shutting down...");
+        shard_manager.shutdown_all().await;
+    });
+
+    if let Err(err) = client.start().await {
+        error!("Client error: {err}");
+    }
+}
+
+async fn wait_for_shutdown_signal() {
+    let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+    let mut sigint = signal(SignalKind::interrupt()).expect("failed to install SIGINT handler");
+    tokio::select! {
+        _ = sigterm.recv() => {}
+        _ = sigint.recv() => {}
+    }
 }
 
 fn init_logging() {
