@@ -1,7 +1,11 @@
 .PHONY: build push
 
+IMAGE := zitronenjoghurt/mcdc-bot
+VERSION := $(shell sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+BUILD := docker buildx build --platform linux/amd64,linux/arm64 -t $(IMAGE):$(VERSION) -t $(IMAGE):latest -f docker/Dockerfile
+
 build:
-	docker buildx build --platform linux/amd64,linux/arm64 -t zitronenjoghurt/mcdc-bot:latest -f docker/Dockerfile .
+	$(BUILD) .
 
 push:
-	docker buildx build --platform linux/amd64,linux/arm64 -t zitronenjoghurt/mcdc-bot:latest -f docker/Dockerfile --push .
+	$(BUILD) --push .
