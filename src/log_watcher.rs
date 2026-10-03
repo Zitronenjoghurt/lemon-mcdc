@@ -104,7 +104,7 @@ async fn watch_loop(
     }
 }
 
-const VILLAGER_AVATAR: &str = "https://mc-heads.net/avatar/MHF_Villager/128";
+const VILLAGER_AVATAR: &str = "https://minotar.net/helm/MHF_Villager/128";
 const SERVER_NAME: &str = "Server";
 
 #[derive(Debug, PartialEq)]
@@ -215,7 +215,7 @@ impl Event {
 }
 
 fn player_avatar(player: &str) -> String {
-    format!("https://mc-heads.net/avatar/{player}/128")
+    format!("https://minotar.net/helm/{player}/128")
 }
 
 struct LineParser {
